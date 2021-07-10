@@ -512,3 +512,64 @@ def experiment(
         'predictions': predictions,
         'metric': score_func.__name__,
         'score': score_func(y_assess, predictions)}
+
+
+def wordentail_experiment_cv(
+        train_data,
+        assess_data,
+        vector_func,
+        vector_combo_func,
+        train_func,
+        featurize_func=word_entail_featurize,
+):
+    """Train and evaluation code for the word-level entailment task.
+
+    Parameters
+    ----------
+    train_data : list
+    assess_data : list
+    vector_func : function
+        Any function mapping words in the vocab for `wordentail_data`
+        to vector representations
+    vector_combo_func : function
+        Any function for combining two vectors into a new vector
+        of fixed dimensionality.
+    model : class with `fit` and `predict` methods
+    featurize_func : function to return feature (X,y) with intended tensor
+
+    Prints
+    ------
+    To standard ouput
+        An sklearn classification report for all three splits.
+
+    Returns
+    -------
+    dict with structure
+
+        'model': the trained model
+        'train_condition': train_condition
+        'assess_condition': assess_condition
+        'macro-F1': score for 'assess_condition'
+        'vector_func': vector_func
+        'vector_combo_func': vector_combo_func
+
+    We pass 'vector_func' and 'vector_combo_func' through to ensure alignment
+    between these experiments and the bake-off evaluation.
+
+    """
+    X_train, y_train = featurize_func(
+        train_data,  vector_func, vector_combo_func)
+    X_dev, y_dev = featurize_func(
+        assess_data, vector_func, vector_combo_func)
+    model = train_func(X_train, y_train)
+    predictions = model.predict(X_dev)
+    # Report:
+    print(classification_report(y_dev, predictions, digits=3))
+    macrof1 = utils.safe_macro_f1(y_dev, predictions)
+    return {
+        'model': model,
+        'train_data': train_data,
+        'assess_data': assess_data,
+        'macro-F1': macrof1,
+        'vector_func': vector_func,
+        'vector_combo_func': vector_combo_func}
